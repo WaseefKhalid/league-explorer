@@ -126,8 +126,11 @@ def page():
         go = st.form_submit_button("Build", type="primary", icon=":material/construction:")
     if go:
         name, short, home = name.strip(), short.strip(), home.strip()
-        if up is None or not name or not short:
-            st.warning("Add the zip, a league name and a short name, then build.", icon=":material/info:")
+        missing = [w for w, ok in (("the zip", up is not None), ("a league name", name), ("a short name", short))
+                   if not ok]
+        if missing:
+            st.warning("Still needed: " + ", ".join(missing) + ". The grey text in a box is only an example; "
+                       "type your own.", icon=":material/info:")
         else:
             bar = st.progress(0.0, text=f"Building {name} from {up.name}… (large leagues take a minute)")
             _build(up.getvalue(), name, short, home, bar)

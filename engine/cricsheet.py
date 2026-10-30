@@ -52,6 +52,9 @@ def read_zip(src) -> tuple[pd.DataFrame, list[dict], pd.DataFrame]:
     """
     z = _open(src)
     names = z.namelist()
+    if not any(Path(n).name.endswith("_info.csv") for n in names):
+        raise ValueError("This zip isn't in Cricsheet's CSV2 format (it may be the older \"CSV\" download). "
+                         "On cricsheet.org download the league's CSV2 file instead: its name ends in _csv2.zip.")
     infos, frames = [], []
     for n in sorted(names):
         if not n.endswith(".csv"):
