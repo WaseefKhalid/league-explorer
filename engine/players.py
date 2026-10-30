@@ -36,6 +36,8 @@ import re
 import numpy as np
 import pandas as pd
 
+from engine.places import same_country
+
 PHASES = ["PP", "MO1", "MO2", "Death"]
 BOWL_TYPES = ["Right-arm pace", "Left-arm pace", "Off-spin", "Leg-spin", "Left-arm orthodox", "Left-arm wrist-spin"]
 TYPE_SHORT = {"Right-arm pace": "RAP", "Left-arm pace": "LAP", "Off-spin": "OS", "Leg-spin": "LS",
@@ -129,7 +131,7 @@ def _origin(country, home_country, keep_mark: bool) -> str:
         return UNKNOWN
     base = country.rstrip("*").strip()
     mark = "*" if (keep_mark and country.endswith("*")) else ""
-    return ("Local" if base == home_country else "Overseas") + mark
+    return ("Local" if same_country(base, home_country) else "Overseas") + mark
 
 
 def _mark_assumed(country, full_name, has_full_name: bool):

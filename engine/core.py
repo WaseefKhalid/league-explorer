@@ -11,7 +11,7 @@ import re
 import numpy as np
 import pandas as pd
 
-from engine.places import city_country
+from engine.places import city_country, same_country
 
 PHASES = [("PP", 1, 6), ("MO1", 7, 10), ("MO2", 11, 16), ("Death", 17, 20)]
 BOWLER_WICKETS = {"bowled", "caught", "caught and bowled", "lbw", "stumped", "hit wicket"}
@@ -194,7 +194,7 @@ def registry_lookup(people: pd.DataFrame, registry: pd.DataFrame | None) -> dict
 def _origin(country, home_country) -> str:
     if not isinstance(country, str) or not country or not home_country:
         return "Unknown"
-    return "Local" if country == home_country else "Overseas"
+    return "Local" if same_country(country, home_country) else "Overseas"
 
 
 # ── ball ─────────────────────────────────────────────────────────────────────────────────────
@@ -512,7 +512,7 @@ def _team_matches(matches: pd.DataFrame, d: pd.DataFrame, overrides: dict, home_
             # Home = the team's own ground; Away = elsewhere in the home country; Neutral = abroad or no home ground
             hv = homes.get(team)
             r["Home Ground"] = ("Neutral" if not hv else "Home" if hv == mt["Venue"]
-                                else "Away" if mt["Host"] == home_country else "Neutral")
+                                else "Away" if same_country(mt["Host"], home_country) else "Neutral")
             r["Decided"] = int(mt["Decided (no DLS)"] == 1)
             r["Opp Full 1st Inns"] = int(mt["Bat First"] == opp and mt["Full 1st Inns"] == 1)
             rows.append(r)

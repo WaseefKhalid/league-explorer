@@ -35,6 +35,14 @@ _LOOKUP = {city.lower(): country for country, cities in _COUNTRY.items() for cit
 SHORT = {"United Arab Emirates": "UAE", "United States of America": "USA"}
 
 
+def same_country(a, b) -> bool:
+    """"United Arab Emirates" and "UAE" (and "USA") are the same country; case and spacing don't matter."""
+    if not isinstance(a, str) or not isinstance(b, str):
+        return False
+    norm = lambda c: SHORT.get(c.strip(), c.strip()).lower()   # noqa: E731
+    return norm(a) == norm(b)
+
+
 def city_country(name) -> str | None:
     """Country for a city (or a venue name containing a known city), short form for UAE/USA."""
     if not isinstance(name, str) or not name.strip():
