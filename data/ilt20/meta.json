@@ -1,0 +1,22 @@
+{
+  "name": "International League T20",
+  "short": "ILT20",
+  "slug": "ilt20",
+  "seasons": [
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "matches": 134,
+  "first_match": "2023-01-13",
+  "last_match": "2026-01-04",
+  "teams": 7,
+  "home_country": "UAE",
+  "built": "2026-10-30",
+  "has_hand_type": false,
+  "has_origin": false,
+  "has_host": false,
+  "has_home": false,
+  "has_fielding": false
+}
