@@ -42,16 +42,21 @@ def season_of(label: str, date: pd.Timestamp) -> int:
 
 
 def seasons_for(labels: pd.Series, dates: pd.Series) -> list[int]:
-    """Calendar year of the match (PSL, IPL …). Leagues whose seasons run across the new year
-    (Big Bash: December–January) use the season label's end year instead, so a season stays whole."""
-    lab = labels.fillna("").astype(str)
-    split = lab.str.match(r"^\d{4}/\d{2,4}$")
-    if split.any():
-        g = pd.DataFrame({"lab": lab[split], "y": dates[split].dt.year})
-        crosses = g.groupby("lab")["y"].nunique().gt(1)
-        if crosses.mean() > 0.5:
-            return [season_of(a, d) for a, d in zip(lab, dates)]
-    return [int(d.year) for d in dates]
+    """A season is a run of matches with no break longer than two months (or a new season label after a
+    two-week break), named by the year its last match was played. So a December–January season (ILT20 4,
+    Big Bash) stays whole under the year of its final, and play-offs held months later in the same year
+    (PSL 2020, IPL 2021) stay with their season."""
+    d = pd.to_datetime(pd.Series(dates).reset_index(drop=True))
+    lab = pd.Series(labels).reset_index(drop=True).fillna("").astype(str)
+    order = np.argsort(d.to_numpy(), kind="stable")
+    ds, ls = d.iloc[order].reset_index(drop=True), lab.iloc[order].reset_index(drop=True)
+    gap = ds.diff().dt.days.fillna(0)
+    new = (gap > 60) | ((ls != ls.shift()) & (gap > 14))
+    run = new.cumsum()
+    end_year = ds.dt.year.groupby(run).transform("max")
+    out = np.empty(len(d), dtype=int)
+    out[order] = end_year.to_numpy()
+    return out.tolist()
 
 
 def overs_str(balls: float) -> float:
