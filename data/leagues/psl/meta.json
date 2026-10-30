@@ -1,0 +1,25 @@
+{
+  "name": "Pakistan Super League",
+  "short": "PSL",
+  "slug": "psl",
+  "seasons": [
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "matches": 357,
+  "built": "2026-10-30",
+  "has_hand_type": true,
+  "has_origin": true,
+  "has_host": true,
+  "has_home": true,
+  "has_fielding": true
+}

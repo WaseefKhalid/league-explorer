@@ -1,0 +1,83 @@
+[server]
+maxUploadSize = 500
+enableStaticServing = true
+
+[client]
+toolbarMode = "minimal"
+# Visitors never see code: if anything fails they get a plain message, no traceback.
+showErrorDetails = "none"
+
+[theme]
+linkUnderline = false
+showWidgetBorder = true
+baseRadius = "8px"
+buttonRadius = "8px"
+baseFontSize = 15
+font = "Instrument Sans, system-ui, sans-serif"
+headingFont = "Big Shoulders Display, Instrument Sans, sans-serif"
+headingFontWeights = [800, 700, 700, 700, 600, 600]
+metricValueFontSize = "2.4rem"
+metricValueFontWeight = 700
+
+[[theme.fontFaces]]
+family = "Instrument Sans"
+url = "app/static/fonts/InstrumentSans-Variable.woff2"
+weight = "400 700"
+style = "normal"
+
+[[theme.fontFaces]]
+family = "Big Shoulders Display"
+url = "app/static/fonts/BigShouldersDisplay-600.woff2"
+weight = 600
+
+[[theme.fontFaces]]
+family = "Big Shoulders Display"
+url = "app/static/fonts/BigShouldersDisplay-700.woff2"
+weight = 700
+
+[[theme.fontFaces]]
+family = "Big Shoulders Display"
+url = "app/static/fonts/BigShouldersDisplay-800.woff2"
+weight = 800
+
+[theme.light]
+primaryColor = "#C47510"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F6F8FB"
+textColor = "#0E1528"
+linkColor = "#A85A08"
+borderColor = "#DFE4EC"
+dataframeBorderColor = "#E5E9F0"
+dataframeHeaderBackgroundColor = "#EEF2F7"
+dataframeHeaderTextColor = "#3D4761"
+redColor = "#D6404B"
+orangeColor = "#C47510"
+blueColor = "#2A78D6"
+violetColor = "#6E56CF"
+chartCategoricalColors = ["#C47510", "#2A78D6", "#D6404B", "#6E56CF"]
+
+[theme.light.sidebar]
+backgroundColor = "#F6F8FB"
+secondaryBackgroundColor = "#FFFFFF"
+borderColor = "#DFE4EC"
+
+[theme.dark]
+primaryColor = "#F2A541"
+backgroundColor = "#0E1528"
+secondaryBackgroundColor = "#141C33"
+textColor = "#EEE9DD"
+linkColor = "#F2A541"
+borderColor = "#253052"
+dataframeBorderColor = "#1E2846"
+dataframeHeaderBackgroundColor = "#18213C"
+dataframeHeaderTextColor = "#B9BFD0"
+redColor = "#DD4B57"
+orangeColor = "#F2A541"
+blueColor = "#3F8FE0"
+violetColor = "#9B7BEA"
+chartCategoricalColors = ["#F2A541", "#3F8FE0", "#DD4B57", "#9B7BEA"]
+
+[theme.dark.sidebar]
+backgroundColor = "#0A1022"
+secondaryBackgroundColor = "#141C33"
+borderColor = "#253052"
