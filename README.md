@@ -47,12 +47,23 @@ analyses that need it are left out (the full list is in `analytics/flags.py`):
 
 ### Add or refresh a league (admin)
 
-1. Download the league's **CSV2** zip from cricsheet.org (e.g. `ilt20_male_csv2.zip`).
+1. Download the league's **CSV2** zip from cricsheet.org (e.g. `ilt_male_csv2.zip`).
 2. Sign in as admin, open **More → Add a league**, upload the zip, give the league a
    name and a short name (optionally its home country) and press **Build**. It opens
    straight away, for you only.
-3. **Download data bundle**, unzip it and drag the `data/leagues/<slug>` folder into
-   `data/leagues/` on GitHub. Commit: the league is then on the site for everyone.
+3. Check it, then press **Publish to the site**. The app commits the league to
+   `data/leagues/<slug>/` in this repository; Streamlit updates the app and the league
+   stays in everyone's League picker, like the PSL.
+
+Publishing needs two Streamlit secrets (app → Settings → Secrets), never in the code:
+
+```
+GITHUB_TOKEN = "github_pat_…"   # fine-grained token: this repository only, Contents read & write
+GITHUB_REPO = "WaseefKhalid/league-explorer"
+```
+
+Without them, **Or upload it by hand → Download data bundle** gives the same files to
+upload into `data/leagues/` on GitHub.
 
 To refresh a league (new season, corrections), build the newest zip with the same
 short name and commit the bundle: it overwrites the old folder. On a computer,

@@ -2,9 +2,11 @@
 Admin · Add a league: a Cricsheet CSV2 zip in, the whole site for that league out.
 
 The build runs engine.build_league() in this session; the league appears in
-the sidebar picker at once (for this visitor only). "Download data bundle"
-gives the files to commit to GitHub, after which it is on the site for
-everyone. Building a newer zip with the same short name refreshes a league.
+the sidebar picker at once (for this visitor only). "Publish to the site"
+commits it to the GitHub repository (components/publish.py), after which it
+stays on the site for everyone. Without the GitHub secrets, "Download data
+bundle" gives the same files to upload by hand. Building a newer zip with the
+same short name refreshes a league.
 """
 from __future__ import annotations
 
@@ -21,7 +23,7 @@ import pandas as pd
 import streamlit as st
 
 from analytics import data as d
-from components import auth, leagues
+from components import auth, leagues, publish
 from components import theme as ui
 
 # What every league folder holds (the PSL's files are the template)
@@ -34,6 +36,7 @@ FLAG_LABELS = {"has_hand_type": "Batting hand & bowling type", "has_origin": "Ov
                "has_host": "Host country", "has_home": "Home / away", "has_fielding": "Fielding"}
 _SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]{0,40}$")
 _ERROR = "wz_add_league_error"
+_PUBLISHED = "wz_published"
 
 
 def _missing(lg: d.League) -> list[str]:
@@ -96,8 +99,46 @@ def _summary(lg: d.League) -> str:
     seasons = lg.meta.get("seasons") or []
     span = f"{min(seasons)}–{max(seasons)}" if seasons else "—"
     n = lg.meta.get("matches")
-    return (f"{n:,} matches · seasons {span} · built {lg.meta.get('built', '—')}" if isinstance(n, int)
-            else f"seasons {span} · built {lg.meta.get('built', '—')}")
+    out = (f"{n:,} matches · seasons {span} · built {lg.meta.get('built', '—')}" if isinstance(n, int)
+           else f"seasons {span} · built {lg.meta.get('built', '—')}")
+    try:                       # a quick sense check before publishing: a normal T20 first innings is 150–200
+        m = (lg.tables or {}).get("matches")
+        if m is not None and len(m):
+            out += f" · average first innings {m['1st Inns Runs'].mean():.0f}"
+    except (KeyError, TypeError):
+        pass
+    return out
+
+
+def _publish(lg: d.League) -> None:
+    """Commit the league's folder to GitHub; it stays on the site for everyone after the app updates."""
+    st.session_state.pop(_ERROR, None)
+    bar = st.progress(0.0, text=f"Publishing {lg.name}…")
+    try:
+        verb = "Refresh" if lg.slug in d.disk_leagues() else "Add"
+        files = publish.league_files(lg.tables or {}, lg.meta)
+        url = publish.publish(files, f"{verb} league: {lg.name} ({lg.short})", f"data/leagues/{lg.slug}",
+                              progress=lambda f, t: bar.progress(min(max(f, 0.0), 1.0), text=t))
+        st.session_state.setdefault(_PUBLISHED, {})[lg.slug] = url
+    except publish.PublishError as e:
+        st.session_state[_ERROR] = (f"Publishing failed: {e}", "")
+    except Exception as e:     # noqa: BLE001
+        st.session_state[_ERROR] = (f"Publishing failed: {type(e).__name__}: {e}", traceback.format_exc())
+    bar.empty()
+
+
+_SETUP = """**Set up one-click publishing (once)**
+1. On GitHub (signed in as the repository's owner): **Settings → Developer settings → Personal access tokens →
+   Fine-grained tokens → Generate new token**. Name it *league explorer*, pick an expiry, **Repository access →
+   Only select repositories →** this site's repository, then **Permissions → Contents → Read and write**.
+   Generate it and copy the token (it starts with `github_pat_`).
+2. On Streamlit: this app → **⋮ → Settings → Secrets**, add these two lines under the password and save:
+
+```
+GITHUB_TOKEN = "github_pat_…"
+GITHUB_REPO = "WaseefKhalid/league-explorer"
+```
+The token stays in the app's secrets, never in the code, and only the admin can publish."""
 
 
 def page():
@@ -106,8 +147,8 @@ def page():
     ui.top_bar()
     st.markdown('<div class="wz-title"><h1>Add a league</h1></div>', unsafe_allow_html=True)
     st.markdown('<p class="wz-dek">Turn any Cricsheet T20 league into the whole site: upload its ball-by-ball '
-                'zip, name it, build. It opens here straight away; download the data bundle and commit it to '
-                'put it on the site for everyone.</p>', unsafe_allow_html=True)
+                'zip, name it, build. It opens here for you straight away; check it, then <b>Publish to the '
+                'site</b> and it stays there for everyone, like the PSL.</p>', unsafe_allow_html=True)
 
     with st.form("wz_add_league", border=True):
         up = st.file_uploader("Cricsheet zip (CSV2 format)", type=["zip"],
@@ -140,13 +181,14 @@ def page():
 
     if err := st.session_state.get(_ERROR):
         st.error(err[0], icon=":material/error:")
-        with st.expander("Details"):
-            st.code(err[1], language=None)
+        if err[1]:
+            with st.expander("Details"):
+                st.code(err[1], language=None)
     if done := st.session_state.pop("wz_add_league_done", None):
         lg = leagues.built().get(done[0])
         if lg is not None:
-            st.success(f"Built {lg.name} in {done[1]:.0f} s. It's selected in the sidebar now (for you only, "
-                       "until you commit the bundle).", icon=":material/check_circle:")
+            st.success(f"Built {lg.name} in {done[1]:.0f} s. It's selected in the sidebar now, for you only "
+                       "until you publish it below.", icon=":material/check_circle:")
 
     built = leagues.built()
     on_disk = d.disk_leagues()
@@ -162,15 +204,24 @@ def page():
                 elif miss := _missing(lg):
                     st.warning("The build has no " + ", ".join(miss) + ". Pages that use them won't work for this "
                                "league until the engine produces them.", icon=":material/warning:")
-                if slug in on_disk:
-                    st.caption(f":material/sync: Committing this bundle replaces the {on_disk[slug].name} folder "
-                               f"already on the site (a refresh).")
+                published = st.session_state.get(_PUBLISHED, {}).get(slug)
+                if published:
+                    st.success(f"Published. The site picks it up in a minute or two (refresh the page), then "
+                               f"{lg.name} is in everyone's League picker for good. [See the commit]({published})",
+                               icon=":material/cloud_done:")
+                elif slug == "psl" and slug in on_disk:
+                    st.caption(":material/sync: Publishing replaces the PSL built from your workbook (which has "
+                               "catches and exact DLS targets) with this Cricsheet build.")
+                elif slug in on_disk:
+                    st.caption(f":material/sync: Publishing replaces the {on_disk[slug].name} already on the site "
+                               "(a refresh).")
+                ready = publish.configured()
                 b1, b2, b3 = st.columns([1.6, 1.2, 1], vertical_alignment="center")
                 with b1:
-                    st.download_button("Download data bundle", data=functools.partial(bundle_bytes, lg),
-                                       file_name=f"{slug}-league-data.zip", mime="application/zip",
-                                       on_click="ignore", icon=":material/download:", type="primary",
-                                       key=f"bundle_{slug}", width="stretch")
+                    go_pub = st.button("Publish to the site", key=f"pub_{slug}", type="primary",
+                                       icon=":material/cloud_upload:", width="stretch", disabled=not ready,
+                                       help="Saves it to the site's GitHub repository so it stays for everyone."
+                                       if ready else "Set up publishing first (see below).")
                 with b2:
                     st.button("Show this league", key=f"open_{slug}", on_click=leagues.choose, args=(slug,),
                               icon=":material/visibility:", width="stretch",
@@ -178,18 +229,26 @@ def page():
                 with b3:
                     st.button("Discard", key=f"drop_{slug}", on_click=leagues.discard, args=(slug,),
                               icon=":material/delete:", width="stretch")
-        folder = next(iter(built)) if len(built) == 1 else "<folder>"
-        st.markdown(
-            "**Put it on the site for everyone**\n"
-            f"1. Download the data bundle and unzip it. You get `data/leagues/{folder}/` with the tables, an `mvp` "
-            "folder and `meta.json`.\n"
-            "2. On GitHub, open the site's repository, go to `data/leagues/`, choose **Add file → Upload files** "
-            f"and drag the `{folder}` folder in.\n"
-            "3. Commit. When the app restarts, the league is in everyone's League picker.")
+                if go_pub:
+                    _publish(lg)
+                    st.rerun()
+                with st.expander("Or upload it by hand"):
+                    st.download_button("Download data bundle", data=functools.partial(bundle_bytes, lg),
+                                       file_name=f"{slug}-league-data.zip", mime="application/zip",
+                                       on_click="ignore", icon=":material/download:", key=f"bundle_{slug}")
+                    st.markdown(
+                        f"1. Unzip it. You get `data/leagues/{slug}/` with the tables, an `mvp` folder and "
+                        "`meta.json`.\n"
+                        "2. On GitHub open the repository, click **data**, then **leagues** (the path must read "
+                        "`data / leagues /`), choose **Add file → Upload files** and drag the "
+                        f"`{slug}` folder in.\n"
+                        "3. Commit. When the app updates, the league is in everyone's League picker.")
+        if not publish.configured():
+            st.info(_SETUP, icon=":material/key:")
 
     st.subheader("Refresh a league", anchor=False)
-    st.caption("New season or corrections? Download the newest zip from Cricsheet and build it here with the same "
-               "short name. The bundle has the same folder name, so committing it overwrites the old files.")
+    st.caption("New season or corrections? Download the newest zip from Cricsheet, build it here with the same "
+               "short name and publish: it replaces the league's old files.")
     if on_disk:
         rows = [{"Folder": s, "League": lg.name, "Short": lg.short,
                  "Seasons": (f"{min(lg.meta['seasons'])}–{max(lg.meta['seasons'])}" if lg.meta.get("seasons")
