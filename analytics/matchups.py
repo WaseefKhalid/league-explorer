@@ -28,7 +28,7 @@ from analytics.blocks import Block
 
 MIN_BALLS = 12
 TITLE = "Matchups — batter v bowler"
-SUBTITLE = "{n:,} pairs that have met for 12+ balls · pick a span, then filter Batter or Bowler"
+SUBTITLE = "{n:,} pairs that have met for 12+ balls."
 HOW_TO_READ = [
     "Every number follows the Seasons box at the top. Dismissals count only wickets credited to the bowler.",
     "Edge (shown when the pair met for 12+ balls in the span) compares the pair with the batter's own "
@@ -135,11 +135,34 @@ def table(span) -> tuple[pd.DataFrame, pd.Series]:
     return df[COLUMNS], pd.Series(edge, index=df.index, dtype=object)
 
 
-def build(span: tuple[int, int]) -> list[Block]:
+FILTERS = ["batter", "bowler", "edge"]
+ALL_BATTERS, ALL_BOWLERS, ALL_EDGES = "All batters", "All bowlers", "All edges"
+EDGES = ["Batter on top", "Even", "Bowler on top"]
+DEFAULTS = {"batter": ALL_BATTERS, "bowler": ALL_BOWLERS, "edge": ALL_EDGES}
+
+
+def filter_options(span=None) -> dict[str, list]:
+    df, _ = table((min(span), max(span)))
+    return {"batter": [ALL_BATTERS] + sorted(df["Batter"].dropna().unique(), key=str.lower),
+            "bowler": [ALL_BOWLERS] + sorted(df["Bowler"].dropna().unique(), key=str.lower),
+            "edge": [ALL_EDGES] + EDGES}
+
+
+def build(span: tuple[int, int], batter: str = ALL_BATTERS, bowler: str = ALL_BOWLERS,
+          edge: str = ALL_EDGES) -> list[Block]:
     span = (min(span), max(span))
-    df, edge = table(span)
+    df, edge_text = table(span)
+    keep = pd.Series(True, index=df.index)
+    if batter != ALL_BATTERS:
+        keep &= df["Batter"] == batter
+    if bowler != ALL_BOWLERS:
+        keep &= df["Bowler"] == bowler
+    if edge != ALL_EDGES:
+        keep &= edge_text == edge
+    filtered = batter != ALL_BATTERS or bowler != ALL_BOWLERS or edge != ALL_EDGES
+    df, edge_text = df[keep], edge_text[keep]
     labels = pd.DataFrame(None, index=df.index, columns=df.columns, dtype=object)
-    labels["Edge"] = edge
+    labels["Edge"] = edge_text
     intro = Block(
         key="mu_intro",
         title="How to read",
@@ -150,7 +173,8 @@ def build(span: tuple[int, int]) -> list[Block]:
         key="mu_all",
         title=TITLE,
         df=df,
-        note=SUBTITLE.format(n=len(df)),
+        note=SUBTITLE.format(n=len(df)) + (" Filtered by your batter / bowler / edge choices."
+                                          if filtered else ""),
         # CF: "Batter…" green, "Bowler…" pink, "Even" yellow (Edge: +1 / 0 / −1)
         rules={"Edge": {"good": (">=", 0.5), "bad": ("<=", -0.5)}},
         labels=labels,

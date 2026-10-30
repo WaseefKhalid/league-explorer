@@ -73,7 +73,7 @@ PAGE_INFO = {
                 ":material/sports_baseball:"),
     "best-bowling-seasons": ("Players", "Best Bowling Seasons", "best_bowling", "span",
                              "The 150 highest wicket-taking individual seasons inside your span.", ":material/star:"),
-    "matchups": ("Players", "Matchups", "matchups", "span",
+    "matchups": ("Players", "Matchups", "matchups", "explorer",
                  "Every batter–bowler pair that has met for 12+ balls: head-to-head and who is on top.",
                  ":material/compare_arrows:"),
     "players": ("Players", "Player List", "players_list", "span",
@@ -86,6 +86,7 @@ GROUPS = {
     "mvp_scoreboard": [["team", "role", "player"]],
     "mvp_highlights": [["category", "stage", "close"], ["team", "player"]],
     "mvp_close": [["team", "player"]],
+    "matchups": [["batter", "bowler", "edge"]],
 }
 
 _NUMBER_WORDS = {n: w for n, w in enumerate(
